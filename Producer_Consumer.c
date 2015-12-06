@@ -31,6 +31,7 @@
 void *thread_Producer(void *arg);
 void *thread_Consumer(void *arg);
 void find_Next_Process(int cons_number);
+void find_Next_ProcessV2(int cons_number);	
 int find_highest_prio(int cons_number, int queue, int start, int end);
 int remove_from_queue(int cons_number, int queue, int index, int end);
 
@@ -147,6 +148,7 @@ int main()
 			perror("Thread creation failed");
 			exit(EXIT_FAILURE);
 		}
+		sleep(4);
 
 	// create consumer threads and check that they were safely created 
 	for(lots_of_threads = 0; lots_of_threads < NUM_CONS; lots_of_threads++) {
@@ -156,7 +158,7 @@ int main()
             exit(EXIT_FAILURE);
         }
     }
-    	
+	sleep(10);    	
    
      printf("Waiting for threads to finish...\n");
     for(lots_of_threads = NUM_CONS - 1; lots_of_threads >= 0; lots_of_threads--) {
@@ -207,6 +209,9 @@ void *thread_Producer(void *arg) {
 			}
 
 			buffer[i].prio = buffer[i].static_prio;
+
+			// set the initial avg to 0 
+			buffer[i].slp_avg = 0 ;
 			
 			buffer[i].execut_time = (rand() %45) +5;
 			// Here the buffer is set into ready queue of destin cons
@@ -232,10 +237,9 @@ void *thread_Producer(void *arg) {
 				}
 				else{
 					consq[0].rq0[a] = buffer[i]; 
-					consq[0].rq0[a] = buffer[i]; 
 					consq[0].rq0L ++; 
 				}
-				a++;
+				//a++;
 			}
 			if(j== 1){
 				if(buffer[i].type == 3){
@@ -244,35 +248,36 @@ void *thread_Producer(void *arg) {
 				}
 				else{
 					consq[1].rq0[b] = buffer[i]; 
-					consq[1].rq0[b] = buffer[i]; 
 					consq[1].rq0L ++; 
 				}
-				b++;
+				//b++;
 			}
 			if(j == 2){
 				if(buffer[i].type == 3){
-					consq[2].rq1[a] = buffer[i]; 
+					consq[2].rq1[c] = buffer[i]; 
 					consq[2].rq1L++; 
 				}
-				else{consq[2].rq0[c] = buffer[i]; 
+				else{
 					consq[2].rq0[c] = buffer[i]; 
 					consq[2].rq0L ++; 
 				}
-				c++;
+				//c++;
 			}
 			if(j == 3){
 				if(buffer[i].type == 3){
 					consq[3].rq1[d] = buffer[i]; 
 					consq[3].rq1L++; 
 				}
-				else{consq[3].rq0[d] = buffer[i]; 
-					consq[3].rq0[d] = buffer[i]; 
+				else{
+					consq[3].rq0[d] = buffer[i];  
 					consq[3].rq0L ++; 
 				}
+				//d++;
 			}
 			j++;
 		}
 		
+		printf(" check : %d %d %d %d \n",a,b,c,d);
 		pthread_mutex_unlock(&work_mutex);
 		
 	
@@ -285,21 +290,19 @@ void *thread_Producer(void *arg) {
 // This is the function of my Consumer threads 
 void *thread_Consumer(void *arg) {    
      int cons_number = *(int *)arg;
-
      printf("Starting consumer %d\n",cons_number);
 
 
 
 
-	sleep(1);
+	
 	// here need to call function determine which process needs to be run next from the queue 
-	pthread_mutex_lock(&work_mutex);
-	find_Next_Process(cons_number);
-
-	pthread_mutex_unlock(&work_mutex);
+	//pthread_mutex_lock(&work_mutex);
+	find_Next_ProcessV2(cons_number);
+	//pthread_mutex_unlock(&work_mutex);
 
         
-    printf("%d", cons_number);
+    printf("%d\n", cons_number);
     
     //usleep(20000);
 	
@@ -314,117 +317,19 @@ void *thread_Consumer(void *arg) {
 }
 
 
-
-void find_Next_Process(int cons_number){
-	int plh0 = consq[cons_number].rq0L;
-	int plh0c = 0; 
-	int plh1 = consq[cons_number].rq1L;
-	int plh1c = 0;
-	int plh2 = consq[cons_number].rq2L;
-	int plh2c = 0;
-	int highest_prio;
-
-
-	printf("plh0 %d\n",plh0);
-
-	// Find if process in ready queue 0
-	while(1){
-		// check that the queue is not empty 
-		if(plh0 != plh0c){
-			
-			// now need to find the highest priorety in the queue 0 
-			printf("plh0 before highest_prio: %d\n", plh0);
-			highest_prio = find_highest_prio(cons_number, 0 ,plh0c, plh0);
-			if(highest_prio == -99 ){
-				perror("Cant find highest priorety");
-				exit(EXIT_FAILURE);
-			}
-			printf("highest_prio loc: %d\n", highest_prio);
-			printf("in here1\n");
-			printf("highest_prio_type: %d\n",consq[cons_number].rq0[highest_prio].type);
-			
-			if(consq[cons_number].rq0[highest_prio].type == 1){ 
-				// Type FIFO there forw execute to completion
-				usleep(consq[cons_number].rq0[highest_prio].execut_time);
-				printf("The FIFO is complete\n");
-				consq[cons_number].rq0[highest_prio].pid = dead_thread;
-
-				if(consq[cons_number].rq0[highest_prio].pid == dead_thread){
-
-					
-					plh0 = remove_from_queue(cons_number,0,highest_prio,plh0);
-					if(plh0 == -99){
-						perror("node removal failed");
-						exit(EXIT_FAILURE);
-					}
-					printf("FIFO succesfully removed!");
-				
-
-				}
-				
-
-			}
-
-			if(consq[cons_number].rq0[highest_prio].type == 2){
-				// Type RR there for execute for time quant
-				printf(" in here 2 mahhhhhn \n" );
-
-				usleep(consq[cons_number].rq0[highest_prio].time_slice); 
-				consq[cons_number].rq0[highest_prio].accu_time_slice += consq[cons_number].rq0[highest_prio].time_slice;
-				if(consq[cons_number].rq0[highest_prio].accu_time_slice >= consq[cons_number].rq0[highest_prio].execut_time){
-					consq[cons_number].rq0[highest_prio].pid = dead_thread;
-
-
-					plh0 = remove_from_queue(cons_number,0,highest_prio,plh0);
-					if(plh0 == -99){
-						perror("node removal failed");
-						exit(EXIT_FAILURE);
-					}
-
-					printf("The RR process has succesfully been removed : %d\n",plh0);
-
-				}
-
-
-
-
-
-			}
-
-			if(consq[cons_number].rq2[highest_prio].type == 3){
-				// if type normaal do some stuff 
-				printf(" in here 3");
-			}
-
-		}
-
-		// Find if process in ready queue 0
-		if(plh1 != 0){
-			
-		}
-
-		// Find if process in ready queue 0
-		if(plh2 != 0){
-	
-
-		}
-		//printf(" No threads to execute \n");
-		//exit(EXIT_SUCCESS);
-	}
-	
-
-
-
-}
-
 // returns the location of the highest priorety of a given queue 
 int find_highest_prio(int cons_number, int queue, int start, int end){
-	int location; 
+	int location = 0; 
 	int highest = 0;
 
+
+//	if(end == 0){
+
+//		return location;
+	//}
 	if(queue ==0){
 		
-		for (int i = start; i < end; i++){
+		for (int i = 0; i <= end; i++){
 			if(consq[cons_number].rq0[i].prio > highest){
 				highest = consq[cons_number].rq0[i].prio;
 				location = i; 
@@ -434,15 +339,23 @@ int find_highest_prio(int cons_number, int queue, int start, int end){
 	}
 
 	if(queue ==1){
-		// complete
+			for (int i = start; i <= end; i++){
+			if(consq[cons_number].rq1[i].prio > highest){
+				highest = consq[cons_number].rq1[i].prio;
+				location = i; 
+			}
+			return location; 
+		}
 	}
 	if(queue ==2){
-		// complete
+			for (int i = start; i <= end; i++){
+			if(consq[cons_number].rq2[i].prio > highest){
+				highest = consq[cons_number].rq2[i].prio;
+				location = i; 
+			}
+			return location; 
+		}
 	}
-
-
-
-
 
 	return -99;
 }
@@ -450,7 +363,13 @@ int find_highest_prio(int cons_number, int queue, int start, int end){
 int remove_from_queue(int cons_number, int queue, int index, int end){
 
 	if(queue == 0){
-		for (int i = index; i < end -1 ; i++){
+
+		if(end == 0){
+			return 66; 
+			
+		}
+
+		for (int i = index; i < end-1 ; i++){
 				consq[cons_number].rq0[i] = consq[cons_number].rq0[i+1];
 		}	
 		return end - 1;
@@ -464,6 +383,83 @@ int remove_from_queue(int cons_number, int queue, int index, int end){
 	}
 	return -99;
 }
+
+void find_Next_ProcessV2(int cons_number){
+	int plh0 = consq[cons_number].rq0L;
+	int plh0c = 0; 
+	int plh1 = consq[cons_number].rq1L;
+	int plh1c = 0;
+	int plh2 = consq[cons_number].rq2L;
+	int plh2c = 0;
+	int highest_prio;
+
+	// need to check if there is anything in rq0 
+
+	while(1){
+
+		// get the highest priorety in the queue 
+		highest_prio = find_highest_prio(cons_number, 0 ,plh0c, plh0);
+			if(highest_prio == -99 ){
+				perror("Cant find highest priorety");
+				exit(EXIT_FAILURE);
+			}
+			if(highest_prio == 66){
+				break; 
+			}
+
+		// check if the highest priorety is of type fifo 	
+		if(consq[cons_number].rq0[highest_prio].type == 1){
+			usleep(consq[cons_number].rq0[highest_prio].execut_time);
+			plh0 = remove_from_queue(cons_number,0,highest_prio,plh0);
+			if(plh0 == -99){
+				perror("node removal failed");
+				exit(EXIT_FAILURE);
+			}
+			// the queue is empty 
+			if(plh0 == 66){
+				break; 
+			}
+			printf("FIFO succesfully removed!\n");
+		}
+		// check if highest prio is RR
+		if(consq[cons_number].rq0[highest_prio].type == 2){
+			// sleep for time slice
+			usleep(consq[cons_number].rq0[highest_prio].time_slice); 
+			// update total time slice 
+			consq[cons_number].rq0[highest_prio].accu_time_slice += consq[cons_number].rq0[highest_prio].time_slice;
+
+			// check  if RR is completed  
+			if(consq[cons_number].rq0[highest_prio].accu_time_slice > consq[cons_number].rq0[highest_prio].execut_time){
+
+				plh0 = remove_from_queue(cons_number,0,highest_prio,plh0);
+
+				if(plh0 == -99){
+					perror("node removal failed");
+					exit(EXIT_FAILURE);
+				}
+				if(plh0 == 66){
+					break; 
+				}
+			printf(" RR succesfully removed\n");
+
+			}
+
+		}
+
+		else{
+			break;
+		}
+	}
+
+	// now moving on to "normal type"
+
+
+
+
+
+
+}
+
 
 
 
