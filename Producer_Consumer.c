@@ -51,12 +51,14 @@ struct task_st {
 	int static_prio;
 	int prio; 
 	int execut_time;
+	int time_remain; 
 	int time_slice;
 	int accu_time_slice;
 	int last_cpu;
 	int slp_avg;
 	int type; 
-	int tod;
+	struct timeval arrival_time;
+	struct timeval sleep_time; 
 };
 
 struct task_st buffer[20];
@@ -213,7 +215,11 @@ void *thread_Producer(void *arg) {
 			// set the initial avg to 0 
 			buffer[i].slp_avg = 0 ;
 			
+
+
+			//set the execution time 
 			buffer[i].execut_time = (rand() %45) +5;
+			buffer[i].time_remain = buffer[i].execut_time;
 			// Here the buffer is set into ready queue of destin cons
 
 
@@ -226,7 +232,10 @@ void *thread_Producer(void *arg) {
 				buffer[i].time_slice = (140 - buffer[i].static_prio)*5;
 			}
 
+			// set the time of day 
 
+			gettimeofday(&buffer[i].arrival_time, NULL); 
+			//gettimeofday(&buffer[i].sleep_time, NULL); 
 
 			// place the created thread into a consumers q 
 			// if a normal execution move into the seccond rq of the consumer
@@ -283,7 +292,6 @@ void *thread_Producer(void *arg) {
 	
 
 	printf("Threads succesfully produced!\n");
-   	
     pthread_exit(NULL);
 }
 
@@ -305,10 +313,6 @@ void *thread_Consumer(void *arg) {
     printf("%d\n", cons_number);
     
     //usleep(20000);
-	
-	
-	
-	buffer[cons_number].accu_time_slice = buffer[cons_number].accu_time_slice + buffer[cons_number].time_slice;
 	
     
   //  printf("This is A Consumer thread Argument was \n");
@@ -367,8 +371,6 @@ int find_highest_prio(int cons_number, int queue){
 
 
 
-
-
 // remove a variable from a given consumer, process queue and index 
 void remove_from_queue(int cons_number, int queue, int index){
 
@@ -397,6 +399,11 @@ void find_Next_ProcessV2(int cons_number){
 	int plh1c = 0;
 	int plh2 = consq[cons_number].rq2L;
 	int plh2c = 0;
+
+	int hpRq0;
+	int hpRq1;
+	int hpRq2;
+
 	int highest_prio;
 
 	// need to check if there is anything in rq0 
@@ -411,8 +418,9 @@ void find_Next_ProcessV2(int cons_number){
 		}
 
 		// get the highest priorety in the queue 
-		highest_prio = find_highest_prio(cons_number,0);
-
+		 hpRq0 = find_highest_prio(cons_number,0);
+		 hpRq1 = find_highest_prio(cons_number,1);
+		 hpRq0 = find_highest_prio(cons_number,2);
 			
 
 
@@ -424,6 +432,8 @@ void find_Next_ProcessV2(int cons_number){
 				break; 
 			}
 			highest_prio = 0; 
+
+
 		// check if the highest priorety is of type fifo 	
 
 			
@@ -436,8 +446,6 @@ void find_Next_ProcessV2(int cons_number){
 			if(plh0 == 0 ){
 				ongoing = 0; 
 			}
-			
-			// the queue is empty 
 			
 		}
 		// check if highest prio is RR
