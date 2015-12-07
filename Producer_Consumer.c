@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <semaphore.h>
-
+#include <sys/time.h>
 
 // here are the defines needed for this assignment 
 #define NUM_CONS 4
@@ -235,50 +235,50 @@ void *thread_Producer(void *arg) {
 			// set the time of day 
 
 			gettimeofday(&buffer[i].arrival_time, NULL); 
-			//gettimeofday(&buffer[i].sleep_time, NULL); 
+			gettimeofday(&buffer[i].sleep_time, NULL); 
 
 			// place the created thread into a consumers q 
 			// if a normal execution move into the seccond rq of the consumer
 			if(j== 0){
 				if(buffer[i].type == 3){
-					consq[0].rq1[a] = buffer[i]; 
+					consq[0].rq1[consq[0].rq1L] = buffer[i]; 
 					consq[0].rq1L++; 
 				}
 				else{
-					consq[0].rq0[a] = buffer[i]; 
+					consq[0].rq0[consq[0].rq0L] = buffer[i]; 
 					consq[0].rq0L ++; 
 				}
 				a++;
 			}
 			if(j== 1){
 				if(buffer[i].type == 3){
-					consq[1].rq1[b] = buffer[i]; 
+					consq[1].rq1[consq[1].rq1L] = buffer[i]; 
 					consq[1].rq1L++; 
 				}
 				else{
-					consq[1].rq0[b] = buffer[i]; 
+					consq[1].rq0[consq[1].rq0L] = buffer[i]; 
 					consq[1].rq0L ++; 
 				}
 				b++;
 			}
 			if(j == 2){
 				if(buffer[i].type == 3){
-					consq[2].rq1[c] = buffer[i]; 
+					consq[2].rq1[consq[2].rq1L] = buffer[i]; 
 					consq[2].rq1L++; 
 				}
 				else{
-					consq[2].rq0[c] = buffer[i]; 
+					consq[2].rq0[consq[2].rq0L] = buffer[i]; 
 					consq[2].rq0L ++; 
 				}
 				c++;
 			}
 			if(j == 3){
 				if(buffer[i].type == 3){
-					consq[3].rq1[d] = buffer[i]; 
+					consq[3].rq1[consq[3].rq1L] = buffer[i]; 
 					consq[3].rq1L++; 
 				}
 				else{
-					consq[3].rq0[d] = buffer[i];  
+					consq[3].rq0[consq[3].rq0L] = buffer[i];  
 					consq[3].rq0L ++; 
 				}
 				d++;
@@ -324,16 +324,16 @@ void *thread_Consumer(void *arg) {
 // returns the location of the highest priorety of a given queue 
 int find_highest_prio(int cons_number, int queue){
 	int location = 0; 
-	int highest =  0;
+	int highest = 10000;
 	if(queue ==0){
 		for (int i = 0; i < 25; i++){
-			if(consq[cons_number].rq0[i].prio > highest){
+			if(consq[cons_number].rq0[i].prio < highest){
 				highest = consq[cons_number].rq0[i].prio;
 				location = i; 
 			}
-			if(highest == 0){
+			if(highest == 10000){
 
-				return -99;
+				return 66;
 			}
 			return location; 
 		}
@@ -341,26 +341,26 @@ int find_highest_prio(int cons_number, int queue){
 
 	if(queue ==1){
 			for (int i = 0; i < 25; i++){
-			if(consq[cons_number].rq1[i].prio > highest){
+			if(consq[cons_number].rq1[i].prio < highest){
 				highest = consq[cons_number].rq1[i].prio;
 				location = i; 
 			}
-			if(highest == 0){
+			if(highest == 10000){
 
-				return -99;
+				return 66;
 			}
 			return location; 
 		}
 	}
 	if(queue ==2){
 			for (int i = 0; i < 25; i++){
-			if(consq[cons_number].rq2[i].prio > highest){
+			if(consq[cons_number].rq2[i].prio < highest){
 				highest = consq[cons_number].rq2[i].prio;
 				location = i; 
 			}
-			if(highest == 0){
+			if(highest == 10000){
 
-				return -99;
+				return 66;
 			}
 			return location; 
 		}
@@ -392,18 +392,18 @@ void remove_from_queue(int cons_number, int queue, int index){
 	
 }
 
+
+// this process essentially runs the program for the given consumer
 void find_Next_ProcessV2(int cons_number){
 	int plh0 = consq[cons_number].rq0L;
-	int plh0c = 0; 
 	int plh1 = consq[cons_number].rq1L;
-	int plh1c = 0;
 	int plh2 = consq[cons_number].rq2L;
-	int plh2c = 0;
+
 
 	int hpRq0;
 	int hpRq1;
 	int hpRq2;
-
+	int curq;
 	int highest_prio;
 
 	// need to check if there is anything in rq0 
@@ -418,60 +418,186 @@ void find_Next_ProcessV2(int cons_number){
 		}
 
 		// get the highest priorety in the queue 
-		 hpRq0 = find_highest_prio(cons_number,0);
+		hpRq0 = find_highest_prio(cons_number,0);
+		if(hpRq0 == -99 ){
+			perror("Cant find highest  rq0");
+			exit(EXIT_FAILURE);
+		}
+		if(hpRq0 == 66){
+			printf("rq %d is empty \n ", 0);
+			hpRq0 =0 ;
+		}
 		 hpRq1 = find_highest_prio(cons_number,1);
-		 hpRq0 = find_highest_prio(cons_number,2);
-			
+		if(hpRq1 == -99 ){ 
+			perror("Cant find highest priorety rq1");
+			exit(EXIT_FAILURE);
+		}
+		if(hpRq1 == 66){
+			printf("rq %d is empty \n ", 1);
+			hpRq1 =0 ;
+		}
 
+		 hpRq2 = find_highest_prio(cons_number,2);
+		if(hpRq2 == -99 ){
+			perror("Cant find highest priorety rq2");
+			exit(EXIT_FAILURE);
+		}
+		if(hpRq2 == 66){
+			printf("rq %d is empty\n ", 2);
+			hpRq2 =0 ;
+		}
 
-			if(highest_prio == -99 ){
-				perror("Cant find highest priorety");
-				exit(EXIT_FAILURE);
-			}
-			if(highest_prio == 66){
-				break; 
-			}
-			highest_prio = 0; 
+			// determine which of the highest priorety values is best
+		 if(hpRq0 < hpRq1 && hpRq0 < hpRq2){
+		 	highest_prio = hpRq0;
+		 	curq = 0;
+
+		 }
+		
+		 if(hpRq1 < hpRq0 && hpRq1 < hpRq2){
+		 	highest_prio = hpRq1;
+		 	curq = 1;
+		 }
+
+		 if(hpRq2 < hpRq1 && hpRq2 <hpRq0){
+		 	highest_prio = hpRq2;
+		 	curq = 2;
+		 }	
 
 
 		// check if the highest priorety is of type fifo 	
-
-			
-		if(consq[cons_number].rq0[highest_prio].type == 1){
-			usleep(consq[cons_number].rq0[highest_prio].execut_time);
-			printf("FIFO succesfully removed! pid: %d\n", consq[cons_number].rq0[highest_prio].pid);
-			remove_from_queue(cons_number,0,highest_prio);
-			
-			plh0--; 
-			if(plh0 == 0 ){
-				ongoing = 0; 
-			}
-			
-		}
-		// check if highest prio is RR
-		if(consq[cons_number].rq0[highest_prio].type == 2){
-			// sleep for time slice
-			usleep(consq[cons_number].rq0[highest_prio].time_slice); 
-			// update total time slice 
-			consq[cons_number].rq0[highest_prio].accu_time_slice += consq[cons_number].rq0[highest_prio].time_slice;
-
-			// check  if RR is completed  
-			if(consq[cons_number].rq0[highest_prio].accu_time_slice > consq[cons_number].rq0[highest_prio].execut_time){
+		if(curq==0){
 				
-				// set the prio to 0 
-				
-				printf(" RR succesfully removed pid: %d \n", consq[cons_number].rq0[highest_prio].pid );
+			if(consq[cons_number].rq0[highest_prio].type == 1){
+				usleep(consq[cons_number].rq0[highest_prio].execut_time);
+
+				// calculate the turnaround time 
+				struct timeval finished ; 
+				gettimeofday(&finished,NULL);
+
+				double turnarround = (double)(consq[cons_number].rq1[highest_prio].arrival_time.tv_sec - finished.tv_sec);
+
+
+				printf("FIFO succesfully removed! pid: %d Turnarround time: %f\n ", consq[cons_number].rq0[highest_prio].pid, turnarround);
 				remove_from_queue(cons_number,0,highest_prio);
-				plh0--;
-
+				
+				plh0--; 
 				if(plh0 == 0 ){
-				ongoing = 0; 
+					ongoing = 0; 
 				}
+				
+			}
+			// check if highest prio is RR
+			if(consq[cons_number].rq0[highest_prio].type == 2){
+				// sleep for time slice
+				usleep(consq[cons_number].rq0[highest_prio].time_slice); 
+
+
+				// update total time slice 
+				consq[cons_number].rq0[highest_prio].accu_time_slice += consq[cons_number].rq0[highest_prio].time_slice;
+
+				
+
+				// check  if RR is completed  
+				if(consq[cons_number].rq0[highest_prio].accu_time_slice > consq[cons_number].rq0[highest_prio].execut_time){
+					
+					// set the prio to 0 
+					
+
+
+					// determine the turnaround time using current time and start timeval
+					struct timeval finished ; 
+					gettimeofday(&finished,NULL);
+
+					double turnarround = (double)(consq[cons_number].rq1[highest_prio].arrival_time.tv_sec - finished.tv_sec);
+
+					printf(" RR succesfully removed pid: %d Turnarround time: %f \n", consq[cons_number].rq0[highest_prio].pid, turnarround );
+
+					remove_from_queue(cons_number,0,highest_prio);
+					plh0--;
+
+					if(plh0 == 0 ){
+					ongoing = 0; 
+					}
+				}
+				else{
+					// determine time remaining 
+					consq[cons_number].rq0[highest_prio].time_remain -= consq[cons_number].rq0[highest_prio].time_slice;
+					
+					printf("RR pid: %d still has %d  remaining \n", consq[cons_number].rq0[highest_prio].pid, 	consq[cons_number].rq0[highest_prio].time_remain);
+				}
+
 			}
 
 		}
 		else{
+			//  if not of type fifo or RR is of type Normal 
+			printf(" Type is normal \n");
+
+			// break down into rq1 and rq0
+
+			if(curq == 1){
+				if(consq[cons_number].rq1[highest_prio].time_remain < consq[cons_number].rq0[highest_prio].time_slice){
+
+					usleep(consq[cons_number].rq1[highest_prio].time_remain);
+					// determine the turnarround time 
+
+					struct timeval finished ; 
+					gettimeofday(&finished,NULL);
+
+					double turnarround = (double)(consq[cons_number].rq1[highest_prio].arrival_time.tv_sec - finished.tv_sec);
+
+
+
+					printf("Normal succesfully removed pid: %d Turnarround time: %f \n", consq[cons_number].rq1[highest_prio].pid, turnarround );
+				}
+				else{
+					int prev_prio  = consq[cons_number].rq1[highest_prio].prio; 
+					usleep(consq[cons_number].rq1[highest_prio].time_slice);
+
+
+
+					// find the amount of tics in time slept 
+
+					struct timeval slp_end ;
+					gettimeofday(&slp_end,NULL);
+
+					double sleep_tiks  = (double)(slp_end.tv_sec  - consq[cons_number].rq1.sleep_time.tv_sec);
+
+					
+
+
+
+				}
+
+
+
+
+				}
+
+			}
+
+
+			if(curq == 2){
+
+
+			}
+
+			// check if time remaining is less than time slice 
+
+			
+
+
+
+
+
+
+
 			break;
+
+
+
+
 		}
 	}
 
